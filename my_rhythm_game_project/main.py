@@ -1,5 +1,7 @@
 import pygame, math, time, os, random
 
+# 버전 정보
+__version__ = '1.0.1'
 
 # pygame moduel을 import하고 초기화한다.
 pygame.init()
@@ -90,15 +92,7 @@ rate_data = [0, 0, 0, 0]
 def rating(n):
     # rate_data의 n번째 노트들의 정보를 가져와 판단한다.
     global combo, miss_anim, last_combo, combo_effect, combo_effect2, combo_time, rate
-    if abs((h/12)*9 - rate_data[n-1] < 950*speed*(h/900) and (h/12)*9 - rate_data[n-1] >= 200*speed*(h/900)):
-        last_combo = combo
-        miss_anim = 1
-        combo = 0
-        combo_effect = 0.2
-        combo_time = Time + 1
-        combo_effect2 = 1.3
-        rate = 'WORST'
-    if abs((h/12)*9 - rate_data[n-1]) < 200*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 100*speed*(h/900):
+    if abs((h/12)*9 - rate_data[n-1] < 950*speed*(h/900)) and abs((h/12)*9 - rate_data[n-1] >= 200*speed*(h/900)):
         last_combo = combo
         miss_anim = 1
         combo = 0
@@ -106,24 +100,18 @@ def rating(n):
         combo_time = Time + 1
         combo_effect2 = 1.3
         rate = 'BAD'
-    if abs((h/12)*9 - rate_data[n-1]) < 100*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 50*speed*(h/900):
-        combo += 1
-        combo_effect = 0.2
-        combo_time = Time + 1
-        combo_effect2 = 1.3
-        rate = 'GOOD'
-    if abs((h/12)*9 - rate_data[n-1]) < 50*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 15*speed*(h/900):
-        combo += 1
-        combo_effect = 0.2
-        combo_time = Time + 1
-        combo_effect2 = 1.3
-        rate = 'GREAT'
-    if abs((h/12)*9 - rate_data[n-1]) < 15*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 0*speed*(h/900):
+    if abs((h/12)*9 - rate_data[n-1]) < 200*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 100*speed*(h/900):
         combo += 1
         combo_effect = 0.2
         combo_time = Time + 1
         combo_effect2 = 1.3
         rate = 'PERFECT'
+    if abs((h/12)*9 - rate_data[n-1]) < 100*speed*(h/900) and abs((h/12)*9 - rate_data[n-1]) >= 0*speed*(h/900):
+        combo += 1
+        combo_effect = 0.2
+        combo_time = Time + 1
+        combo_effect2 = 1.3
+        rate = 'EXCELLENT'
 
 
 ##############################################################################################
@@ -272,9 +260,12 @@ while main:
             # 렉이 걸려도 노트는 일정한 속도로 내려오도록 하는 코드를 작성한다.
             # 판정선 위치 기준             현재 시간 - 노트 소환 시간
             #                             시간이 경과할수록 이 부분의 차가 커져 노트가 내려간다.
-            tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * 350 * speed * (h / 900)
+            tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * speed * 350 * (h / 900)
             pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(4/10), tile_data[0] - h / 100, w*(2/10), h / 50))
             # 놓친 노트는 없앤다.
+
+            # (h/12) * 9
+
             if tile_data[0] > h - (h / 9):
                 # 미스 판정을 만든다. 놓치면 해당 노트를 삭제한다.
                 last_combo = combo
@@ -366,6 +357,6 @@ while main:
 
         # frame 제한 코드
         clock.tick(maxframe)
-        
+
     main = False
     ingame = False
