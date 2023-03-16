@@ -1,7 +1,7 @@
-import pygame, math, time, os, random
+import pygame, math, time, os, random, aubio
 
 # 버전 정보
-__version__ = '1.0.1'
+__version__ = '1.1.0'
 
 # pygame moduel을 import하고 초기화한다.
 pygame.init()
@@ -52,6 +52,41 @@ ingame_font_rate = pygame.font.Font(os.path.join(Fpath, 'retro_game_font.ttf'), 
 # 가져온 font로 렌더링한다.
 rate_text = ingame_font_rate.render(str(rate), False, (255, 255, 255))
 
+
+
+# 노래파일 불러오기
+song_file = "hype_boy.wav"
+pygame.mixer.music.load(song_file)
+
+# 노래에 대한 최상의 결과를 얻으려면 win_s값 수정.
+win_s = 512  # fft size
+
+def analyze_beats(song_file, win_s):
+    hop_s = win_s // 2          # hop size
+
+    samplerate = 0
+    s = aubio.source(song_file, samplerate, hop_s)
+    samplerate = s.samplerate
+
+    o = aubio.tempo("default", win_s, hop_s, samplerate)
+
+    beats = []
+
+    total_frames = 0
+    while True:
+        samples, read = s()
+        is_beat = o(samples)
+        if is_beat:
+            beat_time = total_frames / float(samplerate) * 1000  # convert to ms
+            beats.append(beat_time)
+        total_frames += read
+        if read < hop_s:
+            break
+
+    return beats
+
+
+
 # 노트를 생성하는 함수를 만든다.
 def sum_note(n):
     if n == 1:
@@ -74,10 +109,19 @@ def sum_note(n):
 # 노트의 속도를 조절하는 변수를 만든다.
 speed = 1
 
-# 노트 소환을 위한 변수를 만든다.
-notesumt = 0
-num1 = 0
-num2 = 0
+
+
+# 비트를 설정한다.
+beats = analyze_beats(song_file, win_s)
+beat_index = 0
+start_time = pygame.time.get_ticks()
+
+
+
+# # 노트 소환을 위한 변수를 만든다.
+# notesumt = 0
+# num1 = 0
+# num2 = 0
 
 # 화면에 문자를 띄우기 위한 변수를 만든다.
 combo = 0
@@ -114,6 +158,12 @@ def rating(n):
         rate = 'EXCELLENT'
 
 
+
+# 노래파일 플레이
+pygame.mixer.music.play()
+
+
+
 ##############################################################################################
 ##############################################################################################
 
@@ -130,14 +180,26 @@ while main:
             rate_data[3] = t4[0][0]
 
 
+
+         # Inside the while ingame loop:
+        current_time = time.time() - gst
+
+        if beat_index < len(beats) and current_time * 1000 > beats[beat_index]:
+            rail = random.randint(1, 4)
+            sum_note(rail)
+            beat_index += 1
+
+
+
+
         
-        # 생성되는 노트의 수와 노트가 생성되는 lane 번호를 설정하는 부분
-        if Time > 1 * notesumt:
-            notesumt += 1
-            while num1 == num2:
-                num1 = random.randint(1, 4)
-            sum_note(num1)
-            num2 = num1
+        # # 생성되는 노트의 수와 노트가 생성되는 lane 번호를 설정하는 부분
+        # if Time > 1 * notesumt:
+        #     notesumt += 1
+        #     while num1 == num2:
+        #         num1 = random.randint(1, 4)
+        #     sum_note(num1)
+        #     num2 = num1
 
         Time = time.time() - gst
 
