@@ -3,8 +3,15 @@ import mediapipe as mp
 from google.protobuf.json_format import MessageToDict
 
 # 버전 정보
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 
+# 캠 변수 설정
+mpHands = mp.solutions.hands
+hands = mpHands.Hands()
+mpDraw = mp.solutions.drawing_utils
+
+# cam = cv2.VideoCapture(1) # mac User.
+cam = cv2.VideoCapture(0) # Window User.
 
 #############################################################################################
 ########################################### 변수 ############################################
@@ -12,6 +19,23 @@ __version__ = '1.2.1'
 # 창 정보와 관련된 변수를 정의한다.
 w = 1000
 h = w * (9 / 16)
+
+# 나누기 변수를 정의한다.(코드 최적화를 위해)
+a1 = h / 12
+a2 = w / 45
+a3 = 4 / 10
+a4 = 8 / 10
+a5 = h / 900
+a6 = w * (1 / 2)
+a7 = w / 32
+a8 = h / 30
+a9 = h / 35
+a10 = h / 50
+a11 = h / 24
+a12 = h / 100
+a13 = w / 20
+a14 = w / 30
+a15 = h / 2
 
 # lane 좌표 설정
 width1 = w/2 - w*(4/10)
@@ -28,31 +52,20 @@ keys = [0, 0, 0, 0]
 keyset = [0, 0, 0, 0]
 
 # frame을 구한다. 노트의 감속을 위해 필요하다.
-maxframe = 20
+maxframe = 60
 fps = 0
 
 # 시작할 때 게임 화면에 띄울 문자열을 생성한다.
 rate = 'START'
 
-
-
 # pygame moduel을 import하고 초기화한다.
 pygame.init()
-
-
-
 
 # 창 정보를 저장할 변수를 생성한다. 모든 효과는 screen에 띄운다.
 screen = pygame.display.set_mode((w, h))
 
 # 시간을 측정하기 위해 instance를 생성한다.
 clock = pygame.time.Clock()
-
-
-
-
-
-
 
 # 노트 위치 계산을 위해 초시계를 만든다.
 gst = time.time()
@@ -67,8 +80,6 @@ t2 = []
 t3 = []
 t4 = []
 
-
-
 # font 경로를 설정한다.
 Cpath = os.path.dirname(__file__)
 Fpath = os.path.join(Cpath, 'font')
@@ -76,8 +87,6 @@ ingame_font_rate = pygame.font.Font(os.path.join(Fpath, 'retro_game_font.ttf'), 
 
 # 가져온 font로 렌더링한다.
 rate_text = ingame_font_rate.render(str(rate), False, (255, 255, 255))
-
-
 
 # 노래파일 불러오기
 song_file = "hype_boy.wav"
@@ -110,8 +119,6 @@ def analyze_beats(song_file, win_s):
 
     return beats
 
-
-
 # 노트를 생성하는 함수를 만든다.
 def sum_note(n):
     if n == 1:
@@ -135,13 +142,10 @@ def sum_note(n):
 speed = 1
 level = 500
 
-
 # 비트를 설정한다.
 beats = analyze_beats(song_file, win_s)
 beat_index = 0
 start_time = pygame.time.get_ticks()
-
-
 
 # 화면에 문자를 띄우기 위한 변수를 만든다.
 combo = 0
@@ -177,34 +181,8 @@ def rating(n):
         combo_effect2 = 1.3
         rate = 'EXCELLENT'
 
-
-
 # 노래파일 플레이
 pygame.mixer.music.play()
-
-
-
-#===================================================================================================
-# def hand_tracking(frame, hands):
-#     global current_hand_status, palm_x, palm_y
-
-#     frame.flags.writeable = False
-#     results = hands.process(frame)
-#     frame.flags.writeable = True
-#     if results.multi_hand_landmarks:
-#         for hand_landmarks in results.multi_hand_landmarks:
-#             palm_x, palm_y = hand_landmarks.landmark[9].x*sw, hand_landmarks.landmark[9].y*sh
-#             finger_x, finger_y = hand_landmarks.landmark[12].x*sw, hand_landmarks.landmark[12].y*sh
-            
-#             if abs(palm_y - finger_y) < 50:
-#                 hand_status = "grab"
-
-#             else:
-#                 hand_status = "normal"
-            
-#             current_hand_status = hand_status
-#===================================================================================================
-
 
 #===================================================================================================
 cap = cv2.VideoCapture(0)
@@ -213,7 +191,6 @@ mp_hands = mp.solutions.hands
 
 ##############################################################################################
 ##############################################################################################
-
 with mp_hands.Hands(min_detection_confidence = 0.5, min_tracking_confidence = 0.5) as hands:
     while main:
         success, frame = cap.read()
@@ -298,7 +275,6 @@ with mp_hands.Hands(min_detection_confidence = 0.5, min_tracking_confidence = 0.
             pygame.draw.rect(screen, (200-((200/7)*i), 200-((200/7)*i), 200-((200/7)*i)), (w/2 + w*(2/10) + w/32 - (w/32) * keys[3], (h/12)*9 - (h/30) * keys[3] * i, w*(2/10) * keys[3], (h/35) / i))
         # gear line
         pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(4/10), -int(w/100), w*(8/10), h + int(w/50)), int(w/200))
-
 
     # note=========================================================================================
         # 노트를 만든다.
@@ -489,15 +465,11 @@ with mp_hands.Hands(min_detection_confidence = 0.5, min_tracking_confidence = 0.
                     else:
                         keyset[0], keyset[1], keyset[2], keyset[3] = 0, 0, 0, 0
 
-
-
-
         # 화면을 업데이트하는 함수를 정의한다. 이 코드가 없으면 화면이 보이지 않는다.
         pygame.display.flip()
 
         # frame 제한 코드
         clock.tick(maxframe)
-
 
     cap.release()
     main = False
