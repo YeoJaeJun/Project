@@ -1,11 +1,14 @@
-import pygame, math, time, os, random, aubio
+import pygame, math, time, os, random, aubio, cv2
+import mediapipe as mp
+from google.protobuf.json_format import MessageToDict
 
 # 버전 정보
-__version__ = '1.1.1'
+__version__ = '1.2.1'
 
-# pygame moduel을 import하고 초기화한다.
-pygame.init()
 
+#############################################################################################
+########################################### 변수 ############################################
+#############################################################################################
 # 창 정보와 관련된 변수를 정의한다.
 w = 1000
 h = w * (9 / 16)
@@ -17,6 +20,27 @@ width3 = w/2
 width4 = w/2 + w*(2/10)
 width5 = w/2 + w*(4/10)
 
+# 변수를 정의한다.
+main = True
+
+# 키 누름을 감지하는 list를 정의한다.
+keys = [0, 0, 0, 0]
+keyset = [0, 0, 0, 0]
+
+# frame을 구한다. 노트의 감속을 위해 필요하다.
+maxframe = 20
+fps = 0
+
+# 시작할 때 게임 화면에 띄울 문자열을 생성한다.
+rate = 'START'
+
+
+
+# pygame moduel을 import하고 초기화한다.
+pygame.init()
+
+
+
 
 # 창 정보를 저장할 변수를 생성한다. 모든 효과는 screen에 띄운다.
 screen = pygame.display.set_mode((w, h))
@@ -24,17 +48,11 @@ screen = pygame.display.set_mode((w, h))
 # 시간을 측정하기 위해 instance를 생성한다.
 clock = pygame.time.Clock()
 
-# 변수를 정의한다.
-main = True
-ingame = True
 
-# 키 누름을 감지하는 list를 정의한다.
-keys = [0, 0, 0, 0]
-keyset = [0, 0, 0, 0]
 
-# frame을 구한다. 노트의 감속을 위해 필요하다.
-maxframe = 60
-fps = 0
+
+
+
 
 # 노트 위치 계산을 위해 초시계를 만든다.
 gst = time.time()
@@ -49,8 +67,7 @@ t2 = []
 t3 = []
 t4 = []
 
-# 시작할 때 게임 화면에 띄울 문자열을 생성한다.
-rate = 'START'
+
 
 # font 경로를 설정한다.
 Cpath = os.path.dirname(__file__)
@@ -114,9 +131,9 @@ def sum_note(n):
         tst = Time + 2
         t4.append([ty, tst])
 
-# 노트의 속도를 조절하는 변수를 만든다.
+# 게임의 레벨을 조절하는 변수를 만든다.
 speed = 1
-
+level = 500
 
 
 # 비트를 설정한다.
@@ -125,11 +142,6 @@ beat_index = 0
 start_time = pygame.time.get_ticks()
 
 
-
-# # 노트 소환을 위한 변수를 만든다.
-# notesumt = 0
-# num1 = 0
-# num2 = 0
 
 # 화면에 문자를 띄우기 위한 변수를 만든다.
 combo = 0
@@ -172,11 +184,44 @@ pygame.mixer.music.play()
 
 
 
+#===================================================================================================
+# def hand_tracking(frame, hands):
+#     global current_hand_status, palm_x, palm_y
+
+#     frame.flags.writeable = False
+#     results = hands.process(frame)
+#     frame.flags.writeable = True
+#     if results.multi_hand_landmarks:
+#         for hand_landmarks in results.multi_hand_landmarks:
+#             palm_x, palm_y = hand_landmarks.landmark[9].x*sw, hand_landmarks.landmark[9].y*sh
+#             finger_x, finger_y = hand_landmarks.landmark[12].x*sw, hand_landmarks.landmark[12].y*sh
+            
+#             if abs(palm_y - finger_y) < 50:
+#                 hand_status = "grab"
+
+#             else:
+#                 hand_status = "normal"
+            
+#             current_hand_status = hand_status
+#===================================================================================================
+
+
+#===================================================================================================
+cap = cv2.VideoCapture(0)
+mp_hands = mp.solutions.hands
+#===================================================================================================
+
 ##############################################################################################
 ##############################################################################################
 
-while main:
-    while ingame:
+with mp_hands.Hands(min_detection_confidence = 0.5, min_tracking_confidence = 0.5) as hands:
+    while main:
+        success, frame = cap.read()
+        if not success:
+            print("ERROR")
+            break
+
+        frame = cv2.flip(frame, 1)
 
         if len(t1) > 0:
             rate_data[0] = t1[0][0]
@@ -187,50 +232,29 @@ while main:
         if len(t4) > 0:
             rate_data[3] = t4[0][0]
 
-
-
-         # Inside the while ingame loop:
+        # Inside the while ingame loop:
         current_time = time.time() - gst
-
-        if beat_index < len(beats) and current_time * 1000 > beats[beat_index]:
+        if beat_index < len(beats) and current_time * level > beats[beat_index]:
             rail = random.randint(1, 4)
             sum_note(rail)
             beat_index += 1
-
-
-
-
-        
-        # # 생성되는 노트의 수와 노트가 생성되는 lane 번호를 설정하는 부분
-        # if Time > 1 * notesumt:
-        #     notesumt += 1
-        #     while num1 == num2:
-        #         num1 = random.randint(1, 4)
-        #     sum_note(num1)
-        #     num2 = num1
-
         Time = time.time() - gst
-
+        
         # combo 글씨 생성
         ingame_font_combo = pygame.font.Font(os.path.join(Fpath, 'retro_game_font.ttf'), int((w / 45) * combo_effect2))
         combo_text = ingame_font_combo.render(str(combo), False, (255, 255, 255))
-
+        
         # 점수 글씨 생성
         rate_text = ingame_font_rate.render(str(rate), False, (255, 255, 255))
         rate_text = pygame.transform.scale(rate_text, (int(w / 110 * len(rate) * combo_effect2), int((w / 60 * combo_effect * combo_effect2))))
-
+        
         # miss 글씨 생성
         ingame_font_miss = pygame.font.Font(os.path.join(Fpath, 'retro_game_font.ttf'), int((w / 45 * miss_anim)))
         miss_text = ingame_font_miss.render(str(last_combo), False, (255, 0, 0))
-
-
+        
         fps = clock.get_fps()
         if fps == 0:
             fps = maxframe
-
-
-        # (width, height)로 mouse의 position을 딴다.
-        mouse_position = pygame.mouse.get_pos()
 
         # 이벤트 감지 코드를 작성한다.
         for event in pygame.event.get():
@@ -238,74 +262,28 @@ while main:
             if event.type == pygame.QUIT:
                 # 창을 지운다.
                 pygame.quit()
-            # 입력 키를 마우스로 설정한다.
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # lane 1
-                if  width1 <= mouse_position[0] and mouse_position[0] <= width2 and event.button == 1:
-                    keyset[0] = 1
-                    if len(t1) > 0:
-                        if t1[0][0] > h / 3:
-                            rating(1)
-                            del t1[0]
-                    
-                # lane 2
-                if  width2 < mouse_position[0] and mouse_position[0] <= width3 and event.button == 1:
-                    keyset[1] = 1
-                    if len(t2) > 0:
-                        if t2[0][0] > h / 3:
-                            rating(2)
-                            del t2[0]
-                    
-                # lane 3
-                if  width3 < mouse_position[0] and mouse_position[0] <= width4 and event.button == 1:
-                    keyset[2] = 1
-                    if len(t3) > 0:
-                        if t3[0][0] > h / 3:
-                            rating(3)
-                            del t3[0]
-                    
-                # lane 4
-                if  width4 < mouse_position[0] and mouse_position[0] <= width5 and event.button == 1:
-                    keyset[3] = 1
-                    if len(t4) > 0:
-                        if t4[0][0] > h / 3:
-                            rating(4)
-                            del t4[0]
-            
-            # 마우스 버튼이 떼지면 모든 keyset 값을 0으로 바꾼다.
-            if event.type == pygame.MOUSEBUTTONUP:     
-                keyset[0], keyset[1], keyset[2], keyset[3] = 0, 0, 0, 0
 
-# gear========================================================================================
-        # 화면을 그린다. 단색으로 채운다.
+     # gear========================================================================================
         screen.fill((0, 0, 0))
-
         # 움직임에 감속을 넣어주는 코드를 작성한다.
         keys[0] += (keyset[0] - keys[0]) / (3 * (maxframe / fps))
         keys[1] += (keyset[1] - keys[1]) / (3 * (maxframe / fps))
         keys[2] += (keyset[2] - keys[2]) / (3 * (maxframe / fps))
         keys[3] += (keyset[3] - keys[3]) / (3 * (maxframe / fps))
-
-
-# text=========================================================================================
+ 
+    # text=========================================================================================
         # 텍스트의 움직임을 결정한다.
         if Time > combo_time:
-            combo_effect += (0 - combo_effect) / (7 * (maxframe / fps))
+            combo_effect += (0 - combo_effect) / (1 * (maxframe / fps))
         if Time < combo_time:
-            combo_effect += (1 - combo_effect) / (7 * (maxframe / fps))
-        
-        combo_effect2 += (2 - combo_effect2) / (7 * (maxframe / fps))
+            combo_effect += (1 - combo_effect) / (1 * (maxframe / fps))
 
+        combo_effect2 += (2 - combo_effect2) / (7 * (maxframe / fps))
         miss_anim += (4 - miss_anim) / (14 * (maxframe / fps))
 
-
-
-# gear==========================================================================================
-        # gear background
-        pygame.draw.rect(screen, (0, 0, 0), (w/2 - w*(4/10), -int(w/100), w*(8/10), h + int(w / 50)))
-
-# key 효과===================================================================================
-# key를 눌렀을 때 생기는 효과를 만든다.
+    # gear=========================================================================================
+    # key 효과===================================================================================
+        # key를 눌렀을 때 생기는 효과를 만든다.
         for i in range(7):
             i += 1
             pygame.draw.rect(screen, (200-((200/7)*i), 200-((200/7)*i), 200-((200/7)*i)), (w/2 - w*(4/10) + w/32 - (w/32) * keys[0], (h/12)*9 - (h/30) * keys[0] * i, w*(2/10) * keys[0], (h/35) / i))
@@ -318,13 +296,11 @@ while main:
         for i in range(7):
             i += 1
             pygame.draw.rect(screen, (200-((200/7)*i), 200-((200/7)*i), 200-((200/7)*i)), (w/2 + w*(2/10) + w/32 - (w/32) * keys[3], (h/12)*9 - (h/30) * keys[3] * i, w*(2/10) * keys[3], (h/35) / i))
-
-
         # gear line
         pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(4/10), -int(w/100), w*(8/10), h + int(w/50)), int(w/200))
 
 
-# note=========================================================================================
+    # note=========================================================================================
         # 노트를 만든다.
         for tile_data in t1:
             # 렉이 걸려도 노트는 일정한 속도로 내려오도록 하는 코드를 작성한다.
@@ -332,10 +308,8 @@ while main:
             #                             시간이 경과할수록 이 부분의 차가 커져 노트가 내려간다.
             tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * speed * 350 * (h / 900)
             pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(4/10), tile_data[0] - h / 100, w*(2/10), h / 50))
+            
             # 놓친 노트는 없앤다.
-
-            # (h/12) * 9
-
             if tile_data[0] > h - (h / 9):
                 # 미스 판정을 만든다. 놓치면 해당 노트를 삭제한다.
                 last_combo = combo
@@ -347,7 +321,6 @@ while main:
                 rate = 'MISS'
                 t1.remove(tile_data)
 
-        
         for tile_data in t2:
             tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * 350 * speed * (h / 900)
             pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(2/10), tile_data[0] - h / 100, w*(2/10), h / 50))
@@ -360,7 +333,7 @@ while main:
                 combo_effect2 = 1.3
                 rate = 'MISS'
                 t2.remove(tile_data)
-        
+
         for tile_data in t3:
             tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * 350 * speed * (h / 900)
             pygame.draw.rect(screen, (255, 255, 255), (w/2           , tile_data[0] - h / 100, w*(2/10), h / 50))
@@ -373,7 +346,7 @@ while main:
                 combo_effect2 = 1.3
                 rate = 'MISS'
                 t3.remove(tile_data)
-        
+
         for tile_data in t4:
             tile_data[0] = (h / 12) * 9 + (Time - tile_data[1]) * 350 * speed * (h / 900)
             pygame.draw.rect(screen, (255, 255, 255), (w/2 + w*(2/10), tile_data[0] - h / 100, w*(2/10), h / 50))
@@ -387,40 +360,137 @@ while main:
                 rate = 'MISS'
                 t4.remove(tile_data)
 
-
-
-
-
-# blinder=============================================================================================
+    # blinder=============================================================================================
         # 판정선을 그린다.
         pygame.draw.rect(screen, (0, 0, 0), (w/2 - w*(4/10), (h/12) * 9, w*(8/10), h / 2))
         pygame.draw.rect(screen, (255, 255, 255), (w/2 - w*(4/10), (h/12) * 9, w*(8/10), h / 2), int(h / 100))
 
-
-
-
-
-# key==================================================================================================
-# 배경 화면을 꾸민다.
+    # key==================================================================================================
+    # 배경 화면을 꾸민다.
         pygame.draw.circle(screen, (255 - 100 * keys[0], 255 - 100 * keys[0], 255 - 100 * keys[0]), (w/2 - w*(3/10), (h / 24) * 21 + (h / 50) * keys[0]), (w / 20), int(h / 100))
         pygame.draw.circle(screen, (255 - 100 * keys[0], 255 - 100 * keys[0], 255 - 100 * keys[0]), (w/2 - w*(3/10), (h / 24) * 21 + (h / 50) * keys[0]), (w / 30))
-        
+
         pygame.draw.circle(screen, (255 - 100 * keys[1], 255 - 100 * keys[1], 255 - 100 * keys[1]), (w/2 - w*(1/10), (h / 24) * 21 + (h / 50) * keys[1]), (w / 20), int(h / 100))
         pygame.draw.circle(screen, (255 - 100 * keys[1], 255 - 100 * keys[1], 255 - 100 * keys[1]), (w/2 - w*(1/10), (h / 24) * 21 + (h / 50) * keys[1]), (w / 30))
-        
+
         pygame.draw.circle(screen, (255 - 100 * keys[2], 255 - 100 * keys[2], 255 - 100 * keys[2]), (w/2 + w*(1/10), (h / 24) * 21 + (h / 50) * keys[2]), (w / 20), int(h / 100))
         pygame.draw.circle(screen, (255 - 100 * keys[2], 255 - 100 * keys[2], 255 - 100 * keys[2]), (w/2 + w*(1/10), (h / 24) * 21 + (h / 50) * keys[2]), (w / 30))
-        
+
         pygame.draw.circle(screen, (255 - 100 * keys[3], 255 - 100 * keys[3], 255 - 100 * keys[3]), (w/2 + w*(3/10), (h / 24) * 21 + (h / 50) * keys[3]), (w / 20), int(h / 100))
         pygame.draw.circle(screen, (255 - 100 * keys[3], 255 - 100 * keys[3], 255 - 100 * keys[3]), (w/2 + w*(3/10), (h / 24) * 21 + (h / 50) * keys[3]), (w / 30))
-
 
         # font를 화면에 띄운다.
         miss_text.set_alpha(255 - (255 / 4) * miss_anim)
         screen.blit(combo_text, (w / 2 - combo_text.get_width() / 2, (h / 12) * 4 - combo_text.get_height() / 2))
         screen.blit(rate_text, (w / 2 - rate_text.get_width() / 2, (h / 12) * 8 - rate_text.get_height() / 2))
         screen.blit(miss_text, (w / 2 - miss_text.get_width() / 2, (h / 12) * 8 - miss_text.get_height() / 2))
-        
+
+        results = hands.process(frame)
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                # 왼손과 오른손을 구별한다. 왼손은 'Left' 오른손은 'Right'이다.           
+                for _, hand_handedness in enumerate(results.multi_handedness):
+                    handedness_dict = MessageToDict(hand_handedness)
+                    whichHand =(handedness_dict['classification'][0]['label'])
+
+                # 만약 왼손을 detiection했다면
+                if whichHand == 'Left':
+                    palm_x, palm_y = hand_landmarks.landmark[9].x*w, hand_landmarks.landmark[9].y*h
+                    finger_x, finger_y = hand_landmarks.landmark[12].x*w, hand_landmarks.landmark[12].y*h
+
+                    pygame.draw.circle(screen, (0, 255, 0), (int(palm_x), int(palm_y)), 10)
+                    if abs(palm_y - finger_y) < 50:
+                        hand_status = "grab"
+                        pygame.draw.circle(screen, (0, 255, 255), (int(palm_x), int(palm_y)), 10)
+                    else:
+                        hand_status = "normal"
+
+                    if hand_status=='grab':
+                        # lane 1
+                        if width1 <= palm_x and palm_x <= width2:
+                            keyset[0] = 1
+                            if len(t1) > 0:
+                                if t1[0][0] > h / 3:
+                                    rating(1)
+                                    del t1[0]
+
+                        # lane 2
+                        if  width2 < palm_x and palm_x <= width3:
+                            keyset[1] = 1
+                            if len(t2) > 0:
+                                if t2[0][0] > h / 3:
+                                    rating(2)
+                                    del t2[0]
+
+                        # lane 3
+                        if  width3 < palm_x and palm_x <= width4:
+                            keyset[2] = 1
+                            if len(t3) > 0:
+                                if t3[0][0] > h / 3:
+                                    rating(3)
+                                    del t3[0]
+
+                        # lane 4
+                        if  width4 < palm_x and palm_x <= width5:
+                            keyset[3] = 1
+                            if len(t4) > 0:
+                                if t4[0][0] > h / 3:
+                                    rating(4)
+                                    del t4[0]
+
+                    else:
+                        keyset[0], keyset[1], keyset[2], keyset[3] = 0, 0, 0, 0
+                
+                # 만약 오른손을 detiection했다면
+                if whichHand == 'Right':
+                    palm_x, palm_y = hand_landmarks.landmark[9].x*w, hand_landmarks.landmark[9].y*h
+                    finger_x, finger_y = hand_landmarks.landmark[12].x*w, hand_landmarks.landmark[12].y*h
+
+                    pygame.draw.circle(screen, (0, 255, 0), (int(palm_x), int(palm_y)), 10)
+                    if abs(palm_y - finger_y) < 50:
+                        hand_status = "grab"
+                        pygame.draw.circle(screen, (0, 255, 255), (int(palm_x), int(palm_y)), 10)
+                    else:
+                        hand_status = "normal"
+
+                    if hand_status=='grab':
+                        # lane 1
+                        if width1 <= palm_x and palm_x <= width2:
+                            keyset[0] = 1
+                            if len(t1) > 0:
+                                if t1[0][0] > h / 3:
+                                    rating(1)
+                                    del t1[0]
+
+                        # lane 2
+                        if  width2 < palm_x and palm_x <= width3:
+                            keyset[1] = 1
+                            if len(t2) > 0:
+                                if t2[0][0] > h / 3:
+                                    rating(2)
+                                    del t2[0]
+
+                        # lane 3
+                        if  width3 < palm_x and palm_x <= width4:
+                            keyset[2] = 1
+                            if len(t3) > 0:
+                                if t3[0][0] > h / 3:
+                                    rating(3)
+                                    del t3[0]
+
+                        # lane 4
+                        if  width4 < palm_x and palm_x <= width5:
+                            keyset[3] = 1
+                            if len(t4) > 0:
+                                if t4[0][0] > h / 3:
+                                    rating(4)
+                                    del t4[0]
+
+                    else:
+                        keyset[0], keyset[1], keyset[2], keyset[3] = 0, 0, 0, 0
+
+
+
 
         # 화면을 업데이트하는 함수를 정의한다. 이 코드가 없으면 화면이 보이지 않는다.
         pygame.display.flip()
@@ -428,5 +498,6 @@ while main:
         # frame 제한 코드
         clock.tick(maxframe)
 
+
+    cap.release()
     main = False
-    ingame = False
