@@ -2,7 +2,7 @@ import pygame, cv2, time, os, random, librosa, sys
 import mediapipe as mp
 
 # version 정보
-__version__ = '1.5.0'
+__version__ = '2.0.0'
 
 # pygame moduel을 import하고 초기화한다.
 pygame.init()
@@ -77,6 +77,12 @@ rate = 'START'
 rate_text = ingame_font_rate.render(str(rate), False, WHITE)
 # ===============================================================================================
 
+# image =========================================================================================
+# outro에서 띄울 image path를 설정한다.
+quit_path = os.path.join(Ipath, 'quit.png')
+restart_path = os.path.join(Ipath, 'restart.png')
+# ===============================================================================================
+
 # note가 떨어지는 속도를 설정한다.
 speed = 1
 
@@ -105,7 +111,7 @@ miss_cnt = 0          # 0 점
 
 # song ==========================================================================================
 # 노래 file을 불러온다.
-song_file = os.path.join(Mpath, 'more_short_canon.wav')
+song_file = os.path.join(Mpath, 'short_canon.wav')
 
 # beat를 생성한다.
 audio, _ = librosa.load(song_file)
@@ -283,6 +289,7 @@ def game():
     global gst, Time, combo, miss_anim, last_combo, combo_effect, combo_effect2, combo_time, rate, speed, t1, t2, t3, t4, miss_cnt
     
     # 시간 측정을 위해 게임이 플레이 되는 시간을 구하고 combo_time을 다시 계산한다.
+    gst = time.time()
     Time = time.time() - gst
     combo_time = Time + 1
     
@@ -536,7 +543,7 @@ def game():
     # outro ===================================================================================
         if not pygame.mixer.music.get_busy():
             main = False
-            game_outro()
+            end_game()
 
     # update ===================================================================================
         # 화면을 업데이트한다. 이 코드가 없으면 화면이 보이지 않는다.
@@ -550,13 +557,14 @@ def game():
 # 게임의 intro를 만드는 함수를 정의한다. ===================================================
 def start_game():
 
+    # intro 화면에 띄울 문구를 작성한다.
     start_box = pygame.Rect(w // 2 - 130, h // 2 - 80, 265, 50)
     box_txt = ingame_font_rate.render('START GAME', True, WHITE)
     info_text = ingame_font_rate.render("CLICK THE BUTTON TO START", True, WHITE)
     
+    # intro 실행.
     intro = True
     while intro:
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 intro = False
@@ -569,17 +577,21 @@ def start_game():
         image = cv2.flip(img, 1)
         results = hands.process(image)
 
+        # intro 화면을 띄운다.
         screen.fill(BLACK) 
         screen.blit(box_txt, (start_box.x + 10, start_box.y +5))
         screen.blit(info_text, (205, 400))
         pygame.draw.rect(screen, WHITE, start_box, 2)
 
+        # hand detection과 hand tracking을 구현한다.
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 palm_x, palm_y = hand_landmarks.landmark[9].x*w, hand_landmarks.landmark[9].y*h
                 _, finger_y = hand_landmarks.landmark[12].x*w, hand_landmarks.landmark[12].y*h
 
                 pygame.draw.circle(screen, (0, 255, 0), (int(palm_x), int(palm_y)), 15)
+
+                # 게임을 시작한다.
                 if finger_y > palm_y:
                     if start_box.collidepoint(int(palm_x), int(palm_y)):
                         game()
@@ -590,8 +602,8 @@ def start_game():
 # ========================================================================================
 
 # 게임의 outro를 만드는 함수를 정의한다. ===================================================
-def game_outro():
-    global excellent_cnt, perfect_cnt, bad_cnt, miss_cnt, rate, combo, combo_effect, combo_effect2, miss_anim, last_combo, gst, Time
+def end_game():
+    global gst, Time, excellent_cnt, perfect_cnt, bad_cnt, miss_cnt, rate, combo, combo_effect, combo_effect2, miss_anim, last_combo
 
     # outro에서 사용할 font의 크기 및 위치를 변수로 정의한다.
     o1 = w / 25
@@ -630,8 +642,8 @@ def game_outro():
     total_txt_render = ingame_font_total.render(total_txt, False, WHITE)
 
     # 버튼 이미지를 불러온다.
-    quit_img = pygame.image.load(Ipath, 'quit.png')
-    restart_img = pygame.image.load(Ipath, 'restart.png')
+    quit_img = pygame.image.load(quit_path)
+    restart_img = pygame.image.load(restart_path)
 
     # 이미지 사이즈를 지정한다.
     quit_img = pygame.transform.scale(quit_img, (100, 100))
@@ -640,8 +652,8 @@ def game_outro():
     quit_button_box = pygame.Rect(w // 2 + 220, h // 2 - 55,  100, 100)
     restart_button_box = pygame.Rect(w // 2 - 330, h // 2 - 55,  100, 100)
 
+    # outro 실행.
     outro = True
-
     while outro:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -702,12 +714,5 @@ def game_outro():
 
         pygame.display.flip()
 # ========================================================================================
-
-
-
-# 게임을 시작한다. ========================================================================
-# 게임에서 사용할 절대 시간을 구한다.
-gst = time.time()
-Time = time.time() - gst
-
+# 게임을 시작한다.
 start_game()
