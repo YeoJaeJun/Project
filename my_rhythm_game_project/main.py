@@ -2,11 +2,9 @@ import pygame, cv2, time, os, random, librosa, sys
 import mediapipe as mp
 
 # version 정보
-__version__ = '2.0.2'
+__version__ = '2.1.0'
 
-# pygame moduel을 import하고 초기화한다.
-pygame.init()
-
+# screen variable ===============================================================================
 # 창 정보와 관련된 변수를 정의한다.
 w = 1000
 h = w * (9 / 16)
@@ -32,19 +30,27 @@ a17 = int(h / 20)
 a18 = int(h / 10)
 
 # lane 좌표를 설정한다.
-width1 = w*(1/2) - w*a3
+width1 = w*(1/2) - w*(4/10)
 width2 = w*(1/2) - w*(2/10)
 width3 = w*(1/2)
 width4 = w*(1/2) + w*(2/10)
-width5 = w*(1/2) + w*a3
+width5 = w*(1/2) + w*(4/10)
+# ===============================================================================================
 
+# color =========================================================================================
 # 색깔과 관련된 변수를 정의한다.
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+# ===============================================================================================
+
+# screen ========================================================================================
+# pygame moduel을 import하고 초기화한다.
+pygame.init()
 
 # screen instance를 생성한다.
 screen = pygame.display.set_mode((w, h))
+pygame.display.set_caption('ZAM ZAM CIRCULATION')
 
 # 게임 내에서 시간을 측정하기 위해 instance를 생성한다.
 clock = pygame.time.Clock()
@@ -60,6 +66,7 @@ hands = mpHands.Hands(min_detection_confidence = 0.3)
 # frame을 설정한다.
 maxframe = 60
 fps = 0
+# ===============================================================================================
 
 # path ==========================================================================================
 # current 경로를 설정한다.
@@ -83,10 +90,11 @@ rate_text = ingame_font_rate.render(str(rate), False, WHITE)
 
 # image =========================================================================================
 # outro에서 띄울 image path를 설정한다.
-quit_path = os.path.join(Ipath, 'quit.png')
 restart_path = os.path.join(Ipath, 'restart.png')
+quit_path = os.path.join(Ipath, 'quit.png')
 # ===============================================================================================
 
+# note ==========================================================================================
 # note가 떨어지는 속도를 설정한다.
 speed = 1
 
@@ -104,6 +112,7 @@ combo_effect = 0
 combo_effect2 = 0
 miss_anim = 0
 last_combo = 0
+# ===============================================================================================
 
 # outro ========================================================================================
 # outro에서 점수 계산을 위한 변수를 정의한다.
@@ -124,7 +133,7 @@ life_img = pygame.transform.scale(life_img, (l, l))
 
 # song ==========================================================================================
 # 노래 file을 불러온다.
-song_file = os.path.join(Mpath, 'short_canon.wav')
+song_file = os.path.join(Mpath, 'hype_boy.wav')
 
 # beat를 생성한다.
 audio, _ = librosa.load(song_file)
@@ -596,13 +605,33 @@ def game():
 
 # 게임의 intro를 만드는 함수를 정의한다. ===================================================
 def start_game():
-
     # intro 화면에 띄울 문구를 작성한다.
-    start_box = pygame.Rect(w // 2 - 130, h // 2 - 80, 265, 50)
-    box_txt = ingame_font_rate.render('START GAME', True, WHITE)
-    info_text = ingame_font_rate.render("CLICK THE BUTTON TO START", True, WHITE)
-    
-    # intro 실행.
+    intro_name_font = pygame.font.Font(font_file, int(w/13))
+    intro_start_font = pygame.font.Font(font_file, int(w/20))
+    intro_info_font = pygame.font.Font(font_file, int(w/35))
+
+    game_name_txt_render_1 = intro_name_font.render('ZAM ZAM', True, WHITE)
+    game_name_txt_render_2 = intro_name_font.render('CIRCULATION', True, WHITE)
+    start_box_txt_render = intro_start_font.render('START GAME', True, WHITE)
+    info_txt_render = intro_info_font.render("CLICK THE BUTTON TO START", True, WHITE)
+    start_box = pygame.Rect(w/2 - w/5, h/2 + h/8, int(w*(4/10)), int(h/8))
+
+    game_name_txt_render_1_rect = game_name_txt_render_1.get_rect()
+    game_name_txt_render_2_rect = game_name_txt_render_2.get_rect()
+    start_box_txt_render_rect = start_box_txt_render.get_rect()
+    info_txt_render_rect = info_txt_render.get_rect()
+
+    game_name_txt_render_1_rect.center = (w/2, 2*h/10)
+    game_name_txt_render_2_rect.center = (w/2, 3.5*h/10)
+    start_box_txt_render_rect.center = (w/2, h/2 + h*(3/16))
+    info_txt_render_rect.center = (w/2, 9*h/10)
+
+    # START GAME 버튼이 깜박거리도록 변수를 정의한다.
+    blink_interval = 500     # milli seconds
+    last_blink_time = 0
+    show_text = True
+
+    # intro를 실행한다.
     intro = True
     while intro:
         for event in pygame.event.get():
@@ -613,15 +642,27 @@ def start_game():
 
         # 웹캠 이미지를 읽어온다.
         _, img = cam.read()
-        # 좌우 반전 
+        # 좌우를 반전시킨다.
         image = cv2.flip(img, 1)
         results = hands.process(image)
 
         # intro 화면을 띄운다.
         screen.fill(BLACK) 
-        screen.blit(box_txt, (start_box.x + 10, start_box.y +5))
-        screen.blit(info_text, (205, 400))
-        pygame.draw.rect(screen, WHITE, start_box, 2)
+
+        # blink할 시간이지 확인한다.
+        current_time = pygame.time.get_ticks()
+        if current_time - last_blink_time > blink_interval:
+            last_blink_time = current_time
+            show_text = not show_text
+        
+        # blink해야 하면 blink 한다.
+        if show_text:
+            screen.blit(start_box_txt_render, start_box_txt_render_rect)
+            pygame.draw.rect(screen, WHITE, start_box, 4)
+        
+        screen.blit(game_name_txt_render_1, game_name_txt_render_1_rect)
+        screen.blit(game_name_txt_render_2, game_name_txt_render_2_rect)
+        screen.blit(info_txt_render, info_txt_render_rect)
 
         # hand detection과 hand tracking을 구현한다.
         if results.multi_hand_landmarks:
@@ -636,20 +677,22 @@ def start_game():
                     if start_box.collidepoint(int(palm_x), int(palm_y)):
                         game()
                          
+        
         pygame.display.flip()
-        clock.tick(maxframe)
     cam.release()
-# ========================================================================================
+# =========================================================================================
 
-# 게임의 outro를 만드는 함수를 정의한다. ===================================================
+# 게임의 outro를 만드는 함수를 정의한다. ====================================================
 def end_game():
     global gst, Time, excellent_cnt, perfect_cnt, bad_cnt, miss_cnt, rate, combo, combo_effect, combo_effect2, miss_anim, last_combo, life_cnt
 
     # outro에서 사용할 font의 크기 및 위치를 변수로 정의한다.
-    o1 = w / 25
+    o1 = w / 20
     o2 = w / 35
     o3 = w / 30
     o4 = h * (1/10)
+    o5 = 1 / 2
+    o6 = 1 / 10
 
     # outro에서 띄울 총점을 계산한다.
     total_point = (excellent_cnt * 10) + (perfect_cnt * 5) + (bad_cnt * 3)
@@ -682,15 +725,16 @@ def end_game():
     total_txt_render = ingame_font_total.render(total_txt, False, WHITE)
 
     # 버튼 이미지를 불러온다.
-    quit_img = pygame.image.load(quit_path)
     restart_img = pygame.image.load(restart_path)
-
+    quit_img = pygame.image.load(quit_path)
+    
     # 이미지 사이즈를 지정한다.
-    quit_img = pygame.transform.scale(quit_img, (100, 100))
-    restart_img = pygame.transform.scale(restart_img, (100, 100))
-
-    quit_button_box = pygame.Rect(w // 2 + 220, h // 2 - 55,  100, 100)
-    restart_button_box = pygame.Rect(w // 2 - 330, h // 2 - 55,  100, 100)
+    restart_img = pygame.transform.scale(restart_img, (w*o6, w*o6))
+    quit_img = pygame.transform.scale(quit_img, (w*o6, w*o6))
+    
+    # 버튼을 만든다.
+    restart_button_box = pygame.Rect(w*o5 - w*(3/10) - w*o6, h*o5 - w/20,  w*o6, w*o6)
+    quit_button_box = pygame.Rect(w*o5 + w*(3/10), h*o5 - w/20,  w*o6, w*o6)
 
     # outro를 실행한다.
     outro = True
@@ -701,26 +745,25 @@ def end_game():
                 pygame.quit()
                 sys.exit()
         
-        # 웹캠 이미지를 읽어온다.
+        # 웹캠 이미지를 읽어오고 좌우를 반전시킨다.
         _, img = cam.read()
-        # 좌우 반전 
         image = cv2.flip(img, 1)
-        results = hands.process(image)
-        
+
         # outro 화면을 띄운다.
         screen.fill(BLACK)
-        screen.blit(end_txt_render, (w*(1/2) - end_txt_render.get_width() * (1/2), o4))
-        screen.blit(excellent_txt_render, (w*(1/2) - excellent_txt_render.get_width() * (1/2), 3 * o4))
-        screen.blit(perfect_txt_render, (w*(1/2) - perfect_txt_render.get_width() * (1/2), 4 * o4))
-        screen.blit(bad_txt_render, (w*(1/2) - bad_txt_render.get_width() * (1/2), 5 * o4))
-        screen.blit(miss_txt_render, (w*(1/2) - miss_txt_render.get_width() * (1/2), 6 * o4))
-        screen.blit(total_txt_render, (w*(1/2) - total_txt_render.get_width() * (1/2), 8 * o4))
-        screen.blit(quit_img, (w*(1/2) + 220,  4 * o4))
-        screen.blit(restart_img, (w*(1/2) - 330,  4 * o4))
-        pygame.draw.rect(screen, BLACK, quit_button_box, 2)
+        screen.blit(end_txt_render, (w*o5 - end_txt_render.get_width()*o5, o4*o5))
+        screen.blit(excellent_txt_render, (w*o5 - excellent_txt_render.get_width()*o5, 3*o4))
+        screen.blit(perfect_txt_render, (w*o5 - perfect_txt_render.get_width()*o5, 4*o4))
+        screen.blit(bad_txt_render, (w*o5 - bad_txt_render.get_width()*o5, 5*o4))
+        screen.blit(miss_txt_render, (w*o5 - miss_txt_render.get_width()*o5, 6*o4))
+        screen.blit(total_txt_render, (w*o5 - total_txt_render.get_width()*o5, 8*o4))
+        screen.blit(restart_img, (w*o5 - w*(3/10) - w*o6,  h*o5 - w/20))
+        screen.blit(quit_img, (w*o5 + w*(3/10),  h*o5 - w/20))
         pygame.draw.rect(screen, BLACK, restart_button_box, 2)
+        pygame.draw.rect(screen, BLACK, quit_button_box, 2)
 
         # hand detection과 hand tracking을 구현한다
+        results = hands.process(image)
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 palm_x, palm_y = hand_landmarks.landmark[9].x*w, hand_landmarks.landmark[9].y*h
@@ -728,12 +771,6 @@ def end_game():
 
                 pygame.draw.circle(screen, GREEN, (int(palm_x), int(palm_y)), 15)
                 if finger_y > palm_y:
-
-                    # 게임을 나간다.
-                    if quit_button_box.collidepoint(int(palm_x), int(palm_y)):
-                        outro = False
-                        pygame.quit()
-                        sys.exit()
 
                     # 초기화를 시키고 게임을 다시 시작한다.
                     if restart_button_box.collidepoint(int(palm_x), int(palm_y)):
@@ -752,31 +789,41 @@ def end_game():
                         generate_notes()
                         simultaneous_notes()      
                         game()
+                    # 게임을 나간다.
+                    if quit_button_box.collidepoint(int(palm_x), int(palm_y)):
+                        outro = False
+                        pygame.quit()
+                        sys.exit()
 
         pygame.display.flip()
-# ========================================================================================
+    cam.release()
+# =========================================================================================
 
 # 게임이 종료되었을 때 뜨는 창을 만드는 함수를 정의한다. =====================================
 def game_over():
     global gst, Time, excellent_cnt, perfect_cnt, bad_cnt, miss_cnt, rate, combo, combo_effect, combo_effect2, miss_anim, last_combo, life_cnt
 
     o1 = 1 / 2
-    o2 = h / 10
+    o2 = 1 / 10
 
     # 게임 오버되었을 때 창에 띄울 문자를 생성한다.
-    ingame_font_over = pygame.font.Font(font_file, int(w / 20))
-    over_txt = 'Game Over'
-    over_txt_render = ingame_font_over.render(over_txt, False, WHITE)
+    ingame_font_over = pygame.font.Font(font_file, int(w*o2))
+    over_txt_1 = 'GAME'
+    over_txt_2 = 'OVER'
+    over_txt_1_render = ingame_font_over.render(over_txt_1, False, WHITE)
+    over_txt_2_render = ingame_font_over.render(over_txt_2, False, WHITE)
 
     # 버튼 이미지를 불러온다.
-    quit_img = pygame.image.load(quit_path)
     restart_img = pygame.image.load(restart_path)
+    quit_img = pygame.image.load(quit_path)
 
     # 이미지 사이즈를 지정한다.
-    quit_img = pygame.transform.scale(quit_img, (100, 100))
-    restart_img = pygame.transform.scale(restart_img, (100, 100))
-    quit_button_box = pygame.Rect(w // 2 + 220, h // 2 - 55,  100, 100)
-    restart_button_box = pygame.Rect(w // 2 - 330, h // 2 - 55,  100, 100)
+    restart_img = pygame.transform.scale(restart_img, (w*o2, w*o2))
+    quit_img = pygame.transform.scale(quit_img, (w*o2, w*o2))
+
+    # 버튼을 만든다.
+    restart_button_box = pygame.Rect(w*o1 - w*(3/10) - w*o2, h*o1 - w/20,  w*o2, w*o2)
+    quit_button_box = pygame.Rect(w*o1 + w*(3/10), h*o1 - w/20,  w*o2, w*o2)
 
     # 게임이 종료되었을 때 실행되는 창을 띄운다.
     over = True
@@ -787,21 +834,23 @@ def game_over():
                 pygame.quit()
                 sys.exit()
         
-        # 웹캠 이미지를 읽어온다.
+        # 웹캠 이미지를 읽어오고 좌우를 반전시킨다.
         _, img = cam.read()
-        # 좌우 반전 
         image = cv2.flip(img, 1)
-        results = hands.process(image)
-
+        
         # game over 화면을 띄운다.
         screen.fill(BLACK)
-        screen.blit(over_txt_render, (w*o1 - over_txt_render.get_width() * o1, 3 * o2))
-        screen.blit(quit_img, (w*o1 + 220,  4 * o2))
-        screen.blit(restart_img, (w*o1 - 330,  4 * o2))
-        pygame.draw.rect(screen, BLACK, quit_button_box, 2)
-        pygame.draw.rect(screen, BLACK, restart_button_box, 2)
 
-        # hand detection과 hand tracking을 구현한다
+
+        screen.blit(over_txt_1_render, (w*o1 - over_txt_1_render.get_width()*o1, h*o1 - over_txt_1_render.get_height()*2*o1))
+        screen.blit(over_txt_2_render, (w*o1 - over_txt_2_render.get_width()*o1, h*o1 - over_txt_2_render.get_height()*0.2*o1))
+        screen.blit(restart_img, (w*o1 - w*(3/10) - w*o2,  h*o1 - w/20))
+        screen.blit(quit_img, (w*o1 + w*(3/10),  h*o1 - w/20))
+        pygame.draw.rect(screen, BLACK, restart_button_box, 2)
+        pygame.draw.rect(screen, BLACK, quit_button_box, 2)
+
+        # hand detection과 hand tracking을 구현한다.
+        results = hands.process(image)
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 palm_x, palm_y = hand_landmarks.landmark[9].x*w, hand_landmarks.landmark[9].y*h
@@ -809,12 +858,6 @@ def game_over():
 
                 pygame.draw.circle(screen, GREEN, (int(palm_x), int(palm_y)), 15)
                 if finger_y > palm_y:
-
-                    # 게임을 나간다.
-                    if quit_button_box.collidepoint(int(palm_x), int(palm_y)):
-                        over = False
-                        pygame.quit()
-                        sys.exit()
 
                     # 초기화를 시키고 게임을 다시 시작한다.
                     if restart_button_box.collidepoint(int(palm_x), int(palm_y)):
@@ -833,9 +876,15 @@ def game_over():
                         generate_notes()
                         simultaneous_notes()  
                         game()
+                    # 게임을 나간다.
+                    if quit_button_box.collidepoint(int(palm_x), int(palm_y)):
+                        over = False
+                        pygame.quit()
+                        sys.exit()
 
         pygame.display.flip()
-# ========================================================================================
+    cam.release()
+# =========================================================================================
 
 
 
